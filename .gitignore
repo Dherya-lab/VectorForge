@@ -1,0 +1,49 @@
+# Build directories
+build/
+bin/
+out/
+cmake-build-*/
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.ninja
+.ninja_*
+
+# Compiled Object files and Binaries
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.suo
+*.user
+*.user.*
+*.vcxproj
+*.sln
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+
+# Node / Next.js
+node_modules/
+.next/
+dist/
+
+# OS specific
+.DS_Store
+Thumbs.db
