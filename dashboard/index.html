@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VectorForge — Vector Search Optimization</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    
+    <!-- Top Navigation & Control Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand-title">
+          <span class="brand-icon">⚡</span>
+          <span class="brand-name">VectorForge</span>
+        </div>
+        <div class="brand-tag">Vector Search Optimization</div>
+      </div>
+
+      <div class="header-center">
+        <div class="telemetry-pill">
+          <span class="pill-label">Dataset</span>
+          <span class="pill-value" id="hdr-dataset">SIFT-1M (2,000 D128)</span>
+        </div>
+        <div class="telemetry-pill">
+          <span class="pill-label">Backend</span>
+          <span class="pill-value" id="hdr-backend">HNSW (AVX-512)</span>
+        </div>
+        <div class="telemetry-pill">
+          <span class="status-indicator online"></span>
+          <span class="pill-value font-medium" id="hdr-status">Online / Ready</span>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <button id="btn-run-benchmark" class="btn btn-primary" title="Execute evaluation queries and measure empirical performance">
+          <span class="btn-spinner hidden" id="bench-spinner"></span>
+          <span class="btn-icon" id="bench-icon">▶</span>
+          <span id="bench-btn-text">Run Benchmark</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+
+      <!-- Section: Subtitle & Description Banner -->
+      <section class="overview-banner">
+        <div class="banner-text">
+          <h1 class="page-title">Optimization Overview</h1>
+          <p class="page-subtitle">Find the best balance between recall, latency, throughput, and memory.</p>
+        </div>
+        <div class="banner-config-badge">
+          <span class="cfg-lbl">Live Configuration:</span>
+          <code class="cfg-code" id="hdr-current-config">M 16 · efSearch 50</code>
+        </div>
+      </section>
+
+      <!-- Section: Current Performance KPI Cards (4 Metrics) -->
+      <section class="metrics-grid">
+        <!-- Metric 1: Recall@10 -->
+        <div class="kpi-card" id="card-recall">
+          <div class="kpi-header">
+            <span class="kpi-title">Recall@10</span>
+            <span class="kpi-badge" id="kpi-recall-delta">—</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value" id="kpi-recall-val">—</span>
+          </div>
+          <div class="kpi-footer">
+            <span class="kpi-subtext">Exact ground-truth match</span>
+          </div>
+        </div>
+
+        <!-- Metric 2: P95 Latency -->
+        <div class="kpi-card" id="card-latency">
+          <div class="kpi-header">
+            <span class="kpi-title">P95 Latency</span>
+            <span class="kpi-badge" id="kpi-latency-delta">—</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value" id="kpi-latency-val">—</span>
+          </div>
+          <div class="kpi-footer">
+            <span class="kpi-subtext">95th percentile query time</span>
+          </div>
+        </div>
+
+        <!-- Metric 3: Throughput (QPS) -->
+        <div class="kpi-card" id="card-throughput">
+          <div class="kpi-header">
+            <span class="kpi-title">Throughput</span>
+            <span class="kpi-badge" id="kpi-throughput-delta">—</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value" id="kpi-throughput-val">—</span>
+          </div>
+          <div class="kpi-footer">
+            <span class="kpi-subtext">Queries processed per sec</span>
+          </div>
+        </div>
+
+        <!-- Metric 4: Memory -->
+        <div class="kpi-card" id="card-memory">
+          <div class="kpi-header">
+            <span class="kpi-title">Memory</span>
+            <span class="kpi-badge" id="kpi-memory-delta">—</span>
+          </div>
+          <div class="kpi-body">
+            <span class="kpi-value" id="kpi-memory-val">—</span>
+          </div>
+          <div class="kpi-footer">
+            <span class="kpi-subtext">Vector & graph structure</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Performance Trade-Off Chart & AI Tuner Panel -->
+      <section class="split-view-grid">
+        
+        <!-- Left: Performance Trade-off Chart -->
+        <div class="panel-card chart-panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Performance Trade-off</h2>
+              <p class="panel-subtitle">Recall@10 vs. P95 query latency across graph search beam widths</p>
+            </div>
+            <div class="chart-controls">
+              <button class="chart-tab active" id="tab-chart-latency">Recall vs P95 Latency</button>
+              <button class="chart-tab" id="tab-chart-qps">Recall vs QPS</button>
+            </div>
+          </div>
+          <div class="canvas-container">
+            <canvas id="tradeoff-canvas"></canvas>
+          </div>
+          <div class="chart-legend">
+            <span class="legend-item"><span class="dot dot-measured"></span> Measured Benchmark</span>
+            <span class="legend-item"><span class="dot dot-proposed"></span> Proposed Recommendation</span>
+          </div>
+        </div>
+
+        <!-- Right: AI Tuner & Closed-Loop Validation Panel -->
+        <div class="panel-card tuner-panel">
+          
+          <!-- AI Tuner Sub-Card -->
+          <div class="tuner-section">
+            <div class="tuner-header-row">
+              <div class="panel-title-group">
+                <h2 class="panel-title">AI Tuner</h2>
+                <span class="lifecycle-badge badge-proposed" id="tuner-status-badge">Proposed</span>
+              </div>
+              <div class="proposed-config-title" id="tuner-proposed-name">Proposed M16 / ef96</div>
+            </div>
+
+            <!-- Parameters Grid -->
+            <div class="params-spec-grid">
+              <div class="spec-cell">
+                <span class="spec-label">M</span>
+                <span class="spec-val" id="spec-m">16</span>
+              </div>
+              <div class="spec-cell">
+                <span class="spec-label">efSearch</span>
+                <span class="spec-val highlight" id="spec-ef">96</span>
+              </div>
+              <div class="spec-cell">
+                <span class="spec-label">efConstruction</span>
+                <span class="spec-val" id="spec-efc">100</span>
+              </div>
+              <div class="spec-cell">
+                <span class="spec-label">PQ</span>
+                <span class="spec-val" id="spec-pq">8-bit</span>
+              </div>
+            </div>
+
+            <!-- Why / Rationale -->
+            <div class="tuner-rationale-box">
+              <span class="rationale-tag">Why?</span>
+              <p class="rationale-text" id="tuner-reason-text">
+                Analyzing runtime telemetry and latency headroom to expand candidate graph coverage and maximize recall.
+              </p>
+            </div>
+
+            <!-- Expected Impact Table (Clearly labeled as EXPECTED) -->
+            <div class="expected-impact-table">
+              <div class="impact-header-row">
+                <span class="impact-title">Expected Impact <small>(Predicted)</small></span>
+              </div>
+              <div class="impact-row">
+                <span class="impact-metric">Recall</span>
+                <span class="impact-val" id="exp-recall">91.6% → expected 97.2%</span>
+              </div>
+              <div class="impact-row">
+                <span class="impact-metric">P95 Latency</span>
+                <span class="impact-val" id="exp-latency">0.16 ms → expected 0.23 ms</span>
+              </div>
+              <div class="impact-row">
+                <span class="impact-metric">Throughput</span>
+                <span class="impact-val" id="exp-qps">7,280 → expected 5,300 QPS</span>
+              </div>
+            </div>
+
+            <!-- Tuner Action Buttons -->
+            <div class="tuner-actions-row">
+              <button id="btn-apply-config" class="btn btn-apply" title="Apply the recommended search parameters to active index">
+                <span class="btn-spinner hidden" id="apply-spinner"></span>
+                <span id="apply-btn-text">Apply configuration</span>
+              </button>
+              <button id="btn-rollback" class="btn btn-rollback" disabled title="Restore previous configuration">
+                <span class="btn-spinner hidden" id="rollback-spinner"></span>
+                <span id="rollback-btn-text">Rollback</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Phase 8: Before vs After Empirical Validation Sub-Card -->
+          <div class="validation-section" id="validation-section">
+            <div class="validation-header">
+              <h3 class="validation-title">Recommendation Validation</h3>
+              <span class="val-pill pill-pending" id="val-decision-pill">Pending benchmark</span>
+            </div>
+
+            <!-- Comparison Table -->
+            <div class="comparison-table-wrapper">
+              <table class="comparison-table">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Before (Baseline)</th>
+                    <th>After (Measured)</th>
+                    <th>Change</th>
+                  </tr>
+                </thead>
+                <tbody id="comparison-tbody">
+                  <tr>
+                    <td>Recall@10</td>
+                    <td id="cmp-recall-before">—</td>
+                    <td id="cmp-recall-after">—</td>
+                    <td id="cmp-recall-delta" class="delta-neutral">—</td>
+                  </tr>
+                  <tr>
+                    <td>P95 Latency</td>
+                    <td id="cmp-lat-before">—</td>
+                    <td id="cmp-lat-after">—</td>
+                    <td id="cmp-lat-delta" class="delta-neutral">—</td>
+                  </tr>
+                  <tr>
+                    <td>Throughput</td>
+                    <td id="cmp-qps-before">—</td>
+                    <td id="cmp-qps-after">—</td>
+                    <td id="cmp-qps-delta" class="delta-neutral">—</td>
+                  </tr>
+                  <tr>
+                    <td>Memory</td>
+                    <td id="cmp-mem-before">—</td>
+                    <td id="cmp-mem-after">—</td>
+                    <td id="cmp-mem-delta" class="delta-neutral">—</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="validation-explanation" id="val-explanation-box">
+              <span class="val-exp-text" id="val-explanation-text">
+                Waiting for post-apply benchmark execution to empirically validate recommendation.
+              </span>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- Section: Benchmark Results Table (Measured Actuals) -->
+      <section class="panel-card table-panel">
+        <div class="panel-header">
+          <div>
+            <h2 class="panel-title">Benchmark results <span class="title-meta">(Measured Actuals)</span></h2>
+            <p class="panel-subtitle">Empirically recorded k-NN queries evaluated against brute-force ground truth</p>
+          </div>
+          <button id="btn-clear-experiments" class="btn btn-secondary btn-sm" title="Clear all historical benchmark runs">
+            Clear Experiments
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Configuration</th>
+                <th>Recall@10</th>
+                <th>P95 Latency</th>
+                <th>Throughput</th>
+                <th>Memory</th>
+                <th>Status / Source</th>
+              </tr>
+            </thead>
+            <tbody id="benchmark-tbody">
+              <tr class="empty-state-row">
+                <td colspan="7">
+                  <div style="font-weight: 500; margin-bottom: 4px;">No benchmark experiments yet.</div>
+                  <div style="font-size: 12px; color: var(--text-muted);">Run a benchmark to create the first result.</div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom System Status Strip -->
+    <footer class="app-footer">
+      <div class="footer-item">
+        <span class="footer-label">HNSW Index:</span>
+        <span class="footer-val status-ok" id="sys-hnsw-status">Online / Healthy</span>
+      </div>
+      <div class="footer-separator"></div>
+      <div class="footer-item">
+        <span class="footer-label">PQ Compression:</span>
+        <span class="footer-val" id="sys-pq-status">Enabled (8-bit)</span>
+      </div>
+      <div class="footer-separator"></div>
+      <div class="footer-item">
+        <span class="footer-label">Embedding Drift:</span>
+        <span class="footer-val" id="sys-drift-status">0.0% (Normal)</span>
+      </div>
+      <div class="footer-separator"></div>
+      <div class="footer-item">
+        <span class="footer-label">AI Tuner:</span>
+        <span class="footer-val" id="sys-ai-provider">Gemini</span>
+      </div>
+      <div class="footer-separator"></div>
+      <div class="footer-item">
+        <span class="footer-label">Active Config:</span>
+        <code class="footer-code" id="sys-live-config">M16 / ef50</code>
+      </div>
+      <div class="footer-separator"></div>
+      <div class="footer-item">
+        <span class="footer-label">Last Benchmark:</span>
+        <span class="footer-val" id="sys-last-benchmark">—</span>
+      </div>
+    </footer>
+
+    <!-- Clear Experiments Confirmation Modal -->
+    <div class="modal-backdrop hidden" id="clear-modal-backdrop">
+      <div class="modal-box">
+        <h3 class="modal-title">Clear all benchmark experiments?</h3>
+        <p class="modal-desc">
+          Benchmark history will be removed.<br>Your current configuration will not change.
+        </p>
+        <div class="modal-actions">
+          <button id="btn-modal-cancel" class="btn btn-secondary">Cancel</button>
+          <button id="btn-modal-confirm-clear" class="btn btn-danger">Clear experiments</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast-container" class="toast-container"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -55,13 +55,7 @@ public:
      * @brief Inserts float32 vectors from a 1D (D,) or 2D (N, D) NumPy array.
      */
     std::size_t insert(py::array_t<float, py::array::c_style | py::array::forcecast> array) {
-        py::buffer_info buf = array.request();
-
-        if (buf.ndim != 1 && buf.ndim != 2) {
-            throw std::invalid_argument("Input array must be 1-dimensional (D,) or 2-dimensional (N, D). Got ndim=" +
-                                        std::to_string(buf.ndim));
-        }
-
+ 
         const float* ptr = static_cast<const float*>(buf.ptr);
         std::size_t num_vectors = 0;
 

@@ -2,7 +2,7 @@
 
 Welcome to the VectorForge developer and architectural documentation.
 
-## System Architecture
+## System Architecture (Phase 7)
 
 ```text
 Client Applications / External Services
@@ -12,31 +12,25 @@ Client Applications / External Services
    ├── REST Endpoints: /vectors/insert, /vectors/query
    ├── Telemetry Endpoints: /telemetry, /system/telemetry
    ├── Drift Detection Endpoints: /drift, /drift/reset
-   └── Index Configuration: /index/tune
+   └── AI Tuning Endpoints: /tune/recommend, /tune/apply, /tune/status, /tune/rollback
                  │
-                 ├──────────────────────────┐
-                 ▼                          ▼
-      VectorForge C++20 Core      Telemetry & Drift Subsystem
-      (pybind11 zero-copy)        (Thread-safe, bounded memory)
-        ├── HNSW Index Graph       ├── TelemetryCollector
-        ├── Flat VectorIndex       ├── Query DriftDetector
-        ├── SIMD Math Kernels      └── Dataset DriftDetector
+                 ├──────────────────────────┬──────────────────────────┐
+                 ▼                          ▼                          ▼
+      VectorForge C++20 Core      Telemetry & Drift Subsystem      Gemini AI Tuner
+      (pybind11 zero-copy)        (Thread-safe, bounded memory)   (Structured Pydantic)
+        ├── HNSW Index Graph       ├── TelemetryCollector          ├── Safety bounds validator
+        ├── Flat VectorIndex       ├── Query DriftDetector         ├── Heuristic fallback
+        ├── SIMD Math Kernels      └── Dataset DriftDetector       └── Rollback stack
         └── Product Quantizer
 ```
 
-## Phase 6 Telemetry & Drift Detection Specifications
+## Phase 7 AI-Assisted Adaptive Index Tuning Specifications
 
-### 1. Telemetry Collector (`server/telemetry.py`)
-- **Bounded Buffer**: Stores up to `MAX_LATENCY_SAMPLES = 10,000` query latency samples in memory in a circular queue.
-- **Latency Percentiles**: Calculates exact `avg_ms`, `p50_ms`, `p95_ms`, `p99_ms`, `min_ms`, `max_ms`.
-- **Counters**: Atomic tracking of queries, inserts, and operational success/failure counts.
-
-### 2. Embedding Drift Detection (`server/drift.py`)
-- **Baseline**: Distribution statistics ($\mu_{\text{base}}, \sigma_{\text{base}}, \mu_{\text{norm}}, \sigma_{\text{norm}}$) capturing reference embeddings.
-- **Drift Score**:
-  $$S = 0.50 \cdot S_{\mu} + 0.30 \cdot S_{\sigma} + 0.20 \cdot S_{\text{norm}}$$
-- **Thresholds**:
-  - `score < 0.30`: `normal`
-  - `0.30 <= score < 0.60`: `warning`
-  - `score >= 0.60`: `drift_detected`
-- **Scope Boundary**: Detection only. Automatic tuning or parameter modifications are strictly disabled.
+### 1. AI Tuner Subsystem (`server/tuner.py`)
+- **Gemini AI Integration**: Uses `google-genai` SDK with `GEMINI_API_KEY` environment variable.
+- **Safety Bounds**:
+  - `ef_search`: `[1, 10000]` *(Runtime tunable)*
+  - `M`: `[2, 128]` *(Requires index rebuild)*
+  - `ef_construction`: `[4, 2000]` *(Requires index rebuild)*
+- **Rebuild-Required Protection**: Refuses live modification of structural graph parameters, returning `rebuild_required: true`.
+- **Rollback Stack**: In-memory stack of prior configurations enabling safe rollbacks.

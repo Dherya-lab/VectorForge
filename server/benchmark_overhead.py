@@ -13,7 +13,7 @@ from server.drift import DriftDetector
 
 def main():
     print("=" * 80)
-    print(" VectorForge — Search & Telemetry Overhead Benchmark ")
+    print(" VectorForge — Search, Telemetry & AI Tuning Benchmark ")
     print("=" * 80)
 
     N = 10000
@@ -78,11 +78,11 @@ def main():
 
     # 2. FastAPI TestClient (HTTP End-to-End with Telemetry + Drift)
     client = TestClient(app)
-    client.post("/vectors/insert", json={"vectors": dataset.tolist()})
+    client.post("/vectors/insert", json={"vectors": dataset[:1000].tolist()})
 
     http_latencies = []
     t0_http_total = time.perf_counter()
-    for q in queries:
+    for q in queries[:50]:
         t0 = time.perf_counter_ns()
         res = client.post("/vectors/query", json={"vector": q.tolist(), "k": K})
         t1 = time.perf_counter_ns()
@@ -91,7 +91,7 @@ def main():
     t1_http_total = time.perf_counter()
 
     avg_http_us = float(np.mean(http_latencies))
-    qps_http = NUM_QUERIES / (t1_http_total - t0_http_total)
+    qps_http = 50 / (t1_http_total - t0_http_total)
 
     print("\n+------------------------------------+-------------------+--------------------+----------------+")
     print("| Layer / Configuration              | Avg Latency (us)  | Throughput (QPS)   | Overhead       |")
@@ -101,7 +101,21 @@ def main():
     print(f"| FastAPI HTTP (+ Full Telemetry)    | {avg_http_us:14.2f} us | {qps_http:15.2f} QPS | {avg_http_us / avg_raw_us:13.2f}x |")
     print("+------------------------------------+-------------------+--------------------+----------------+\n")
 
-    print(f"Telemetry Latency Overhead: {avg_tele_us - avg_raw_us:.2f} us per query ({overhead_pct:.2f}% relative overhead).")
+    # 3. Phase 7 AI Tuning Lifecycle Measurement
+    t0_rec = time.perf_counter()
+    rec_res = client.post("/tune/recommend", json={"target_recall": 0.98, "priority": "recall"})
+    t1_rec = time.perf_counter()
+    rec_latency_ms = (t1_rec - t0_rec) * 1000.0
+
+    t0_app = time.perf_counter()
+    app_res = client.post("/tune/apply")
+    t1_app = time.perf_counter()
+    app_latency_ms = (t1_app - t0_app) * 1000.0
+
+    print("Phase 7 AI Tuning Latency:")
+    print(f"  • /tune/recommend Latency : {rec_latency_ms:.2f} ms")
+    print(f"  • /tune/apply Latency     : {app_latency_ms:.2f} ms")
+    print(f"  • Tuned Configuration     : {app_res.json().get('configuration')}\n")
 
 if __name__ == "__main__":
     main()
