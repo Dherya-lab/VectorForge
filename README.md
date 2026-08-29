@@ -25,7 +25,7 @@
 
 </div>
 
-## <img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Rocket.png" alt="Rocket" width="30" height="30" /> Executive Summary
+## 🚀 Executive Summary
 
 **VectorForge** is an industrial-grade, bare-metal vector search database engine engineered in **C++20** to resolve memory overhead and tail latency bottlenecks in high-dimensional AI retrieval ($D=1536$).
 
@@ -69,7 +69,7 @@ VectorForge separates compute kernels from asynchronous agentic control loops th
 
 ---
 
-## <img src="[https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Package.png](https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Package.png)" alt="Package" width="30" height="30" /> Repository Structure
+## 📂 Repository Structure
 
 ```text
 VectorForge/
