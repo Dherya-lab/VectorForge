@@ -144,7 +144,6 @@ execute_process(
 )
 
 set(PYBIND11_FINDPYTHON ON)
-set(Python3_EXECUTABLE "C:/Users/harsh/AppData/Local/Programs/Python/Python314/python.exe")
 find_package(Python3 COMPONENTS Interpreter Development.Module REQUIRED)
 
 if(PYBIND11_DIR_RESULT EQUAL 0 AND EXISTS "${PYBIND11_CMAKE_DIR}")

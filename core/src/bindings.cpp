@@ -55,7 +55,7 @@ public:
      * @brief Inserts float32 vectors from a 1D (D,) or 2D (N, D) NumPy array.
      */
     std::size_t insert(py::array_t<float, py::array::c_style | py::array::forcecast> array) {
- 
+        py::buffer_info buf = array.request();
         const float* ptr = static_cast<const float*>(buf.ptr);
         std::size_t num_vectors = 0;
 
